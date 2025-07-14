@@ -1,35 +1,67 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import ChatHeader from './components/ChatHeader';
+import ChatMessages from './components/ChatMessages';
+import ChatInput from './components/ChatInput';
+import { askQuestion } from './services/api';
+import './styles/tailwind.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
+
+  const handleSendMessage = async (query) => {
+    // Add user message
+    const userMessage = {
+      id: generateId(),
+      sender: 'user',
+      content: query,
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await askQuestion(query);
+      
+      // Add assistant response
+      const assistantMessage = {
+        id: generateId(),
+        sender: 'assistant',
+        content: response.answer,
+        sources: response.sources || [],
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage = {
+        id: generateId(),
+        sender: 'assistant',
+        content: `Sorry, I encountered an error: ${error.message}`,
+        sources: [],
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([]);
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="flex flex-col h-screen bg-gray-50">
+      <ChatHeader onClearChat={handleClearChat} />
+      
+      <ChatMessages messages={messages} isLoading={isLoading} />
+      
+      <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+    </div>
+  );
 }
 
-export default App
+export default App;
